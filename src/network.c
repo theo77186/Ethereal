@@ -139,7 +139,7 @@ HiddenLayer::HiddenLayer(std::vector<float> inputs, size_t NeuronCount)
 
 std::vector<float> HiddenLayer::FeedForward(std::vector<float>& input)
 {
-#if 0
+    /*
     const size_t neuronCount = neurons.size();
     const size_t inputSize = input.size();
     //std::cerr << neuronCount << std::endl;
@@ -153,7 +153,8 @@ std::vector<float> HiddenLayer::FeedForward(std::vector<float>& input)
     }
 
     return zeta;
-#elif defined(__AVX__)
+    */
+#if defined(__AVX__)
     const size_t neuronCount = neurons.size();
     const size_t inputSize = input.size();
     constexpr size_t simdSize = 8;
