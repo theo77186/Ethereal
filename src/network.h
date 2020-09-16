@@ -46,6 +46,7 @@ struct HiddenLayer
 private:
 
     std::vector<float> weightTranspose; //first neuron first weight, second neuron first weight etc...
+    std::vector<float> biases;
 };
 
 struct Network

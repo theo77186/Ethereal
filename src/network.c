@@ -1,6 +1,12 @@
 #include <sstream>
 #include <cstring>
 
+#if defined(__AVX__)
+#include <immintrin.h>
+#elif defined(__SSE2__)
+#include <emmintrin.h>
+#endif
+
 #include "network.h"
 
 #include "types.h"
@@ -11,6 +17,16 @@ static const char *WeightsTXT[] = {
     #include "net_224x32x1_nstatic.net"
     ""
 };
+
+#ifdef __AVX__
+inline __m256 vec256FMA(__m256 a, __m256 b, __m256 c) {
+#ifdef __FMA__
+    return _mm256_fmadd_ps(a, b, c);
+#else
+    return _mm256_add_ps(_mm256_mul_ps(a, b), c);
+#endif
+}
+#endif
 
 Network InitNetwork()
 {
@@ -106,6 +122,7 @@ HiddenLayer::HiddenLayer(std::vector<float> inputs, size_t NeuronCount)
     for (size_t i = 0; i < NeuronCount; i++)
     {
         neurons.push_back(Neuron(std::vector<float>(inputs.begin() + (WeightsPerNeuron * i), inputs.begin() + (WeightsPerNeuron * i) + WeightsPerNeuron - 1), inputs.at(WeightsPerNeuron * (1 + i) - 1)));
+        biases.push_back(inputs.at(WeightsPerNeuron * (1 + i) - 1));
     }
 
     for (size_t i = 0; i < WeightsPerNeuron - 1; i++)
@@ -122,12 +139,64 @@ HiddenLayer::HiddenLayer(std::vector<float> inputs, size_t NeuronCount)
 
 std::vector<float> HiddenLayer::FeedForward(std::vector<float>& input)
 {
+#if 0
+    const size_t neuronCount = neurons.size();
+    const size_t inputSize = input.size();
+    //std::cerr << neuronCount << std::endl;
+
+    for (size_t i = 0; i < neuronCount; i++)
+    {
+        float tmp = biases[i];
+        for (size_t j = 0; j < inputSize; j++)
+            tmp += std::max(0.f, input[j]) * weightTranspose[neuronCount * j + i];
+        zeta[i] = tmp;
+    }
+
+    return zeta;
+#elif defined(__AVX__)
+    const size_t neuronCount = neurons.size();
+    const size_t inputSize = input.size();
+    constexpr size_t simdSize = 8;
+
+    for (size_t i = 0; i < neuronCount; i += simdSize)
+    {
+        __m256 tmp = _mm256_loadu_ps(biases.data() + i);
+        for (size_t j = 0; j < inputSize; j++)
+        {
+            __m256 inputVec = _mm256_set1_ps(std::max(0.f, input[j]));
+            __m256 weightVec = _mm256_loadu_ps(weightTranspose.data() + (neuronCount * j) + i);
+            tmp = vec256FMA(inputVec, weightVec, tmp);
+        }
+        _mm256_storeu_ps(zeta.data() + i, tmp);
+    }
+
+    return zeta;
+#elif defined(__SSE2__)
+    const size_t neuronCount = neurons.size();
+    const size_t inputSize = input.size();
+    constexpr size_t simdSize = 4;
+
+    for (size_t i = 0; i < neuronCount; i += simdSize)
+    {
+        __m128 tmp = _mm_loadu_ps(biases.data() + i);
+        for (size_t j = 0; j < inputSize; j++)
+        {
+            __m128 inputVec = _mm_set1_ps(std::max(0.f, input[j]));
+            __m128 weightVec = _mm_loadu_ps(weightTranspose.data() + (neuronCount * j) + i);
+            __m128 tmp2 = _mm_mul_ps(inputVec, weightVec);
+            tmp = _mm_add_ps(tmp, tmp2);
+        }
+        _mm_storeu_ps(zeta.data() + i, tmp);
+    }
+    return zeta;
+#else
     for (size_t i = 0; i < neurons.size(); i++)
     {
         zeta[i] = neurons.at(i).FeedForward(input);
     }
 
     return zeta;
+#endif
 }
 
 
