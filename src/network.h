@@ -35,10 +35,10 @@ typedef struct PKNetwork {
     // need activation functions. The 32x1 operation applys a ReLU, where
     // as the 224x32 layer does not, since inputs are binary 0s and 1s
 
-    ALIGN64 float inputWeights[PKNETWORK_LAYER1][PKNETWORK_INPUTS];
+    ALIGN64 float inputWeights[PKNETWORK_INPUTS][PKNETWORK_LAYER1];
     ALIGN64 float inputBiases[PKNETWORK_LAYER1];
 
-    ALIGN64 float layer1Weights[PKNETWORK_OUTPUTS][PKNETWORK_LAYER1];
+    ALIGN64 float layer1Weights[PKNETWORK_LAYER1][PKNETWORK_OUTPUTS];
     ALIGN64 float layer1Biases[PKNETWORK_OUTPUTS];
 
 } PKNetwork;

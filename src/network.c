@@ -74,7 +74,7 @@ void initPKNetwork() {
         strtok(weights, " ");
 
         for (int j = 0; j < PKNETWORK_INPUTS; j++)
-            PKNN.inputWeights[i][j] = atof(strtok(NULL, " "));
+            PKNN.inputWeights[j][i] = atof(strtok(NULL, " "));
         PKNN.inputBiases[i] = atof(strtok(NULL, " "));
     }
 
@@ -86,7 +86,7 @@ void initPKNetwork() {
         strtok(weights, " ");
 
         for (int j = 0; j < PKNETWORK_LAYER1; j++)
-            PKNN.layer1Weights[i][j] = atof(strtok(NULL, " "));
+            PKNN.layer1Weights[j][i] = atof(strtok(NULL, " "));
         PKNN.layer1Biases[i] = atof(strtok(NULL, " "));
     }
 }
@@ -102,14 +102,14 @@ int fullyComputePKNetwork(Thread *thread) {
     for (int i = 0; i < PKNETWORK_LAYER1; i++) {
         layer1Neurons[i] = PKNN.inputBiases[i];
         for (int j = 0; j < PKNETWORK_INPUTS; j++)
-            layer1Neurons[i] += inputsNeurons[j] * PKNN.inputWeights[i][j];
+            layer1Neurons[i] += inputsNeurons[j] * PKNN.inputWeights[j][i];
     }
 
     for (int i = 0; i < PKNETWORK_OUTPUTS; i++) {
         outputNeurons[i] = PKNN.layer1Biases[i];
         for (int j = 0; j < PKNETWORK_LAYER1; j++)
             if (layer1Neurons[j] >= 0.0)
-                outputNeurons[i] += layer1Neurons[j] * PKNN.layer1Weights[i][j];
+                outputNeurons[i] += layer1Neurons[j] * PKNN.layer1Weights[j][i];
     }
 
     return outputNeurons[0];
@@ -124,7 +124,7 @@ int partiallyComputePKNetwork(Thread *thread) {
         outputNeurons[i] = PKNN.layer1Biases[i];
         for (int j = 0; j < PKNETWORK_LAYER1; j++)
             if (layer1Neurons[j] >= 0.0)
-                outputNeurons[i] += layer1Neurons[j] * PKNN.layer1Weights[i][j];
+                outputNeurons[i] += layer1Neurons[j] * PKNN.layer1Weights[j][i];
     }
 
     return outputNeurons[0];
@@ -141,7 +141,7 @@ void initPKNetworkCollector(Thread *thread) {
     for (int i = 0; i < PKNETWORK_LAYER1; i++) {
         thread->pknnlayer1[0][i] = PKNN.inputBiases[i];
         for (int j = 0; j < PKNETWORK_INPUTS; j++)
-            thread->pknnlayer1[0][i] += inputsNeurons[j] * PKNN.inputWeights[i][j];
+            thread->pknnlayer1[0][i] += inputsNeurons[j] * PKNN.inputWeights[j][i];
     }
 }
 
@@ -155,7 +155,7 @@ void updatePKNetworkIndices(Thread *thread, int changes, int indexes[3], int sig
 
     for (int j = 0; j < changes; j++)
         for (int i = 0; i < PKNETWORK_LAYER1; i++)
-            layer1Neurons[i] += signs[j] * PKNN.inputWeights[i][indexes[j]];
+            layer1Neurons[i] += signs[j] * PKNN.inputWeights[indexes[j]][i];
 }
 
 void updatePKNetworkAfterMove(Thread *thread, uint16_t move) {
